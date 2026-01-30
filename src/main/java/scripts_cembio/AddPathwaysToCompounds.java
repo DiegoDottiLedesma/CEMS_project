@@ -8,154 +8,105 @@ import com.opencsv.CSVReaderBuilder;
 import com.opencsv.CSVWriter;
 import dbmanager.ChebiDatabase;
 import dbmanager.DBManager;
+import dbmanager.KeggRESTAPI;
 import dbmanager.PubchemRest;
 import exceptions.ChebiException;
 import exceptions.CompoundNotFoundException;
+import exceptions.KeggCompoundNotFoundException;
+import org.apache.poi.common.usermodel.HyperlinkType;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CreationHelper;
+import org.apache.poi.ss.usermodel.Hyperlink;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import pathways.PathwayKegg;
 
+import java.io.BufferedReader;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.List;
 
 public class AddPathwaysToCompounds {
 
-    private static final String DB_URL = "jdbc:mysql://localhost:3306/compounds";
-    private static final String USER = "alberto";
-    private static final String PASS = "alberto";
-
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         String inputCsv = "/home/ceu/Escritorio/cmm_temporal/compound_chebis.csv";
-        String outputCsv = "/home/ceu/Escritorio/cmm_temporal/compound_chebis_with_pathways.csv";
-        DBManager db = new DBManager();
-        db.connectToDB(DB_URL, USER, PASS);
+        String outputXlsx = "/home/ceu/Escritorio/cmm_temporal/compound_chebis_with_pathways.xlsx";
 
-        try {
+        try (BufferedReader br = new BufferedReader(new FileReader(inputCsv));
+             XSSFWorkbook workbook = new XSSFWorkbook()) {
 
-            CSVReader reader = new CSVReaderBuilder(new FileReader(inputCsv))
-                    .withCSVParser(new CSVParserBuilder().withSeparator(';').build())
-                    .withSkipLines(1).build();
+            XSSFSheet sheet = workbook.createSheet("Compounds");
 
-            CSVWriter writer = new CSVWriter(
-                    new FileWriter(outputCsv),
-                    ';',
-                    CSVWriter.DEFAULT_QUOTE_CHARACTER,
-                    CSVWriter.DEFAULT_ESCAPE_CHARACTER,
-                    CSVWriter.DEFAULT_LINE_END
-            );
+            String headerLine = br.readLine();
+            String[] headers = headerLine.split(";");
+            // Add "KEGG Pathways" as the starting column for pathways
+            Row headerRow = sheet.createRow(0);
+            int col = 0;
+            for (String h : headers) {
+                Cell cell = headerRow.createCell(col++);
+                cell.setCellValue(h);
+            }
+            Cell pathwayHeaderCell = headerRow.createCell(col++);
+            pathwayHeaderCell.setCellValue("KEGG Pathways");
 
-            // Write new header
-            String[] header = {"Group", "HMDB", "PubChem", "KEGG", "ChEBI"};
-            writer.writeNext(header);
+            String line;
+            int rowIdx = 1;
+            CreationHelper creationHelper = workbook.getCreationHelper();
 
-            String[] line;
-            while ((line = reader.readNext()) != null) {
-                System.out.println(Arrays.toString(line));
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(";");
+                Row row = sheet.createRow(rowIdx++);
 
-                String compoundName = line[0].equals("-") ? null : line[0];
-                String hmdbId = line[1].equals("-") ? null : line[1];
-                Integer pubchemId = null;
-                try {
-                    pubchemId = Integer.parseInt(line[2].trim());
-                } catch (NumberFormatException e) {
-                    pubchemId = null;
+
+                for (int i = 0; i < parts.length; i++) {
+                    String value = parts[i].trim();
+                    if (value.startsWith("\"") && value.endsWith("\"")) {
+                        value = value.substring(1, value.length() - 1);
+                    }
+                    Cell cell = row.createCell(i);
+                    cell.setCellValue(value.trim().equals("-") ? "-" : value.trim());
                 }
-                String keggId = line[3].equals("-") ? null : line[3];
 
-                Integer compoundId = 0;
-                Integer chebiId = null;
-                try {
-                    // 🔍 1️⃣ Try HMDB → PubChem → KEGG
-                    Compound compound = null;
-                    try {
-                        compoundId = db.getCompoundIdByPubChem(pubchemId);
-                        compound = db.getCompoundByCompoundId(compoundId);
-                    } catch (CompoundNotFoundException compoundPCNotFoundException) {
-                        try {
-                            compoundId = db.getCompoundIdByHmdb(hmdbId);
-                            compound = db.getCompoundByCompoundId(compoundId);
-                        } catch (CompoundNotFoundException hmdbNotFoundException) {
-                            try {
-                                compoundId = db.getCompoundIdByKegg(keggId);
-                                compound = db.getCompoundByCompoundId(compoundId);
-                            } catch (CompoundNotFoundException keggNotFoundException) {
-
-                                if (compoundId == 0) {
-                                    try {
-                                        compound = PubchemRest.getCompoundFromPCID(pubchemId);
-                                    } catch (Exception exception) {
-                                        compound = PubchemRest.getCompoundFromName(compoundName);
-                                    }
-                                    if (compound == null) {
-                                        compoundId = db.insertCompound(compound);
-                                        db.insertCompoundIdentifiers(compoundId, compound.getINCHI());
-                                        if (hmdbId != null && !hmdbId.isEmpty() && !hmdbId.equals("-")) {
-                                            db.insertHMDB(compoundId, hmdbId);
-                                        }
-                                        if (pubchemId != null) {
-                                            db.insertPC(compoundId, pubchemId);
-                                        }
-                                        if (keggId != null && !keggId.isEmpty() && !keggId.equals("-")) {
-                                            db.insertKEGG(compoundId, keggId);
-                                        }
-                                    } else {
-                                        System.out.println("Compound not found in any database for row: " + compoundName);
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    String fullHmdbId = null;
-                    try {
-                        fullHmdbId = db.getHmdbIdFromCompoundId(compoundId);
-                    } catch (CompoundNotFoundException e) {
-                    }
-
-                    Integer fullPubchemId = null;
-                    try {
-                        fullPubchemId = db.getPubchemIdFromCompoundId(compoundId);
-                    } catch (CompoundNotFoundException e) {
-                    }
-                    String fullKeggId = null;
-                    try {
-                        fullKeggId = db.getKeggIdFromCompoundId(compoundId);
-                    } catch (CompoundNotFoundException cnfe) {
-                    }
-                    try {
-                        chebiId = db.getChebiIdFromCompoundId(compoundId);
-                    } catch (CompoundNotFoundException cnfe) {
-                        Identifier identifiers = compound.getIdentifiersOwn();
-                        double similarity = 0.95d;
-                        try {
-                            chebiId = ChebiDatabase.getChebiFromSmiles(identifiers.getSmiles(), similarity);
-                            db.insertChebi(compoundId, chebiId);
-                        }
-                        catch (ChebiException chebiException) {
-                            System.out.println("Chebi not found for compound " + compoundName + " with SMILES " + identifiers.getSmiles());
-                        }
-                    }
-
-
-                    // 🧪 3️⃣ Write results to output
-                    writer.writeNext(new String[]{
-                            compoundName,
-                            fullHmdbId != null ? fullHmdbId : hmdbId,
-                            fullPubchemId != null ? fullPubchemId.toString() : pubchemId.toString(),
-                            fullKeggId != null ? fullKeggId : keggId,
-                            chebiId != null ? chebiId.toString() : ""
-                    });
-
-                } catch (SQLException e) {
-                    System.err.printf("SQL error on row %s: %s%n", compoundName, e.getMessage());
+                String value = parts[3].trim();
+                if (value.isEmpty()) {
+                    break;
+                } else if (value.startsWith("\"") && value.endsWith("\"")) {
+                    value = value.substring(1, value.length() - 1);
                 }
+                String keggId = value.trim();
+                List<PathwayKegg> pathways;
+                try {
+                    pathways = KeggRESTAPI.getPathwaysFromCompound(keggId);
+                } catch (KeggCompoundNotFoundException e) {
+                    pathways = List.of(); // empty list if not found
+                }
+
+                int pathwayCol = parts.length; // start after last CSV column
+                for (PathwayKegg pw : pathways) {
+                    Cell cell = row.createCell(pathwayCol++);
+                    Hyperlink link = creationHelper.createHyperlink(HyperlinkType.URL);
+                    link.setAddress("https://www.kegg.jp/dbget-bin/www_bget?" + pw.getPathwayId());
+                    cell.setHyperlink(link);
+                    cell.setCellValue(pw.getPathwayName());
+                }
+
             }
 
-            System.out.println("✅ Processing finished. Output written to " + outputCsv);
+            // Auto-size columns
+            for (int i = 0; i < sheet.getRow(0).getLastCellNum(); i++) {
+                sheet.autoSizeColumn(i);
+            }
 
-        } catch (Exception e) {
-            e.printStackTrace();
+            // Write to XLSX
+            try (FileOutputStream fos = new FileOutputStream(outputXlsx)) {
+                workbook.write(fos);
+            }
         }
-    }
 
+        System.out.println("✅ Excel file written to " + outputXlsx);
+    }
 }

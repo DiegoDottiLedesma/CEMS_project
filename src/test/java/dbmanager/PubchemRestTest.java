@@ -1,23 +1,31 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package dbmanager;
 
 import cems_project.Compound;
 import cems_project.Identifier;
-import java.util.List;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-/**
- *
- * @author maria
- */
-public class PubchemRestTest {
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class PubchemRestTest {
+
+    @Test
+    void getCompoundFromName() {
+
+        try {
+            Compound compound = PubchemRest.getCompoundFromName("2-Ketobutyric acid");
+            System.out.println(compound);
+        } catch (IOException e) {
+            fail("Exception occurred: " + e.getMessage());
+        }
+
+    }
+
+
 
     public PubchemRestTest() {
     }
@@ -175,8 +183,8 @@ public class PubchemRestTest {
     public void testGetPInchisFromChildComps() {
         System.out.println("getPInchisFromChildComps");
         List<Compound> compounds = null;
-        List<String> expResult = null;
-        List<String> result = PubchemRest.getParentsFromChildComps(compounds);
+        List<Compound> expResult = null;
+        List<Compound> result = PubchemRest.getParentsFromChildComps(compounds);
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
@@ -188,10 +196,9 @@ public class PubchemRestTest {
     @Test
     public void testGetCompoundFromInchi() throws Exception {
         System.out.println("getCompoundFromInchi");
-        String inchi = "";
-        Compound expResult = null;
-        Compound result = PubchemRest.getCompoundFromInchi(inchi);
-        assertEquals(expResult, result);
+        LinkedList<Compound> expResult = new LinkedList<Compound>();
+        List<Compound> compounds = PubchemRest.getCompoundsFromInchis(null);
+        assertEquals(expResult, compounds);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
     }
@@ -204,21 +211,7 @@ public class PubchemRestTest {
         System.out.println("getCompsFromInchis");
         List<Compound> compounds = null;
         List<Compound> expResult = null;
-        List<Compound> result = PubchemRest.getCompsFromInchis(compounds);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /**
-     * Test of getInchisFromInchis method, of class PubchemRest.
-     */
-    @Test
-    public void testGetInchisFromInchis() {
-        System.out.println("getInchisFromInchis");
-        List<Compound> compounds = null;
-        List<String> expResult = null;
-        List<String> result = PubchemRest.getInchisFromInchis(compounds);
+        List<Compound> result = PubchemRest.getCompoundsFromInchis(compounds);
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
@@ -235,5 +228,6 @@ public class PubchemRestTest {
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
     }
+
 
 }

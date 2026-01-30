@@ -44,7 +44,9 @@ public class Constants {
     public static final String CHEBI_COMPOUND_ENDPOINT = "https://www.ebi.ac.uk/chebi/backend/api/public/compound/";
     public static final String CHEBI_STRUCTURE_SEARCH_ENDPOINT = "https://www.ebi.ac.uk/chebi/backend/api/public/structure_search/";
 
-    public static final String KEGG_PATHWAYS_FROM_COMPOUND = "https://rest.kegg.jp/link/pathway/";
+    public static final String KEGG_ENDPOINT_GET = "https://rest.kegg.jp/get/";
+    public static final String KEGG_WEB_LINK = "https://www.kegg.jp/pathway/";
+
 
     public static final String CAS_ONLINE_PATH = "https://commonchemistry.cas.org/detail?cas_rn=";
 

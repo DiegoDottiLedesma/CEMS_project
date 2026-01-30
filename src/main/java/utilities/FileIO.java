@@ -10,6 +10,8 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -56,6 +58,16 @@ public class FileIO {
         } catch (IOException ex) {
             System.out.println("exception occurred writing in file" + path + "\n" + ex);
         }
+    }
+
+    public static List<String> readUrl(String urlStr) throws IOException {
+        URL url = new URL(urlStr);
+        List<String> lines = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream()))) {
+            String line;
+            while ((line = br.readLine()) != null) lines.add(line);
+        }
+        return lines;
     }
 
 
