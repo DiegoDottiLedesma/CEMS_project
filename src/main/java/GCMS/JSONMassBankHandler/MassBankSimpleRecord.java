@@ -1,7 +1,8 @@
-package GCMS.JSONMassBankReader;
+package GCMS.JSONMassBankHandler;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 
 public class MassBankSimpleRecord {
 
@@ -29,7 +30,7 @@ public class MassBankSimpleRecord {
     }
 
     public void setAccession(String accession) {
-        this.accession = accession;
+        this.accession = clean(accession);
     }
 
     public String getCompoundName() {
@@ -37,7 +38,7 @@ public class MassBankSimpleRecord {
     }
 
     public void setCompoundName(String compoundName) {
-        this.compoundName = compoundName;
+        this.compoundName = clean(compoundName);
     }
 
     public String getFormula() {
@@ -45,7 +46,7 @@ public class MassBankSimpleRecord {
     }
 
     public void setFormula(String formula) {
-        this.formula = formula;
+        this.formula = clean(formula);
     }
 
     public Double getExactMass() {
@@ -61,7 +62,7 @@ public class MassBankSimpleRecord {
     }
 
     public void setCas(String cas) {
-        this.cas = cas;
+        this.cas = clean(cas);
     }
 
     public String getInchi() {
@@ -69,7 +70,7 @@ public class MassBankSimpleRecord {
     }
 
     public void setInchi(String inchi) {
-        this.inchi = inchi;
+        this.inchi = clean(inchi);
     }
 
     public String getInchiKey() {
@@ -77,7 +78,7 @@ public class MassBankSimpleRecord {
     }
 
     public void setInchiKey(String inchiKey) {
-        this.inchiKey = inchiKey;
+        this.inchiKey = clean(inchiKey);
     }
 
     public String getSmiles() {
@@ -85,7 +86,7 @@ public class MassBankSimpleRecord {
     }
 
     public void setSmiles(String smiles) {
-        this.smiles = smiles;
+        this.smiles = clean(smiles);
     }
 
     public Double getRetentionIndex() {
@@ -108,8 +109,8 @@ public class MassBankSimpleRecord {
         return retentionTimeMinutes;
     }
 
-    public void setRetentionTimeMinutes(Double retentionTimeMinutes) {
-        this.retentionTimeMinutes = retentionTimeMinutes;
+    public void setRetentionTimeMinutes(Double retentionTimeTimeMinutes) {
+        this.retentionTimeMinutes = retentionTimeTimeMinutes;
     }
 
     public String getDerivatizationType() {
@@ -117,7 +118,7 @@ public class MassBankSimpleRecord {
     }
 
     public void setDerivatizationType(String derivatizationType) {
-        this.derivatizationType = derivatizationType;
+        this.derivatizationType = clean(derivatizationType);
     }
 
     public String getInstrumentType() {
@@ -125,7 +126,7 @@ public class MassBankSimpleRecord {
     }
 
     public void setInstrumentType(String instrumentType) {
-        this.instrumentType = instrumentType;
+        this.instrumentType = clean(instrumentType);
     }
 
     public List<SpectrumPeak> getPeaks() {
@@ -133,7 +134,66 @@ public class MassBankSimpleRecord {
     }
 
     public void setPeaks(List<SpectrumPeak> peaks) {
-        this.peaks = peaks;
+        if (peaks == null) {
+            this.peaks = new ArrayList<>();
+        } else {
+            this.peaks = peaks;
+        }
+    }
+
+    public int getNumberOfPeaks() {
+        return peaks == null ? 0 : peaks.size();
+    }
+
+    public boolean hasInchi() {
+        return !isBlank(inchi);
+    }
+
+    public boolean hasInchiKey() {
+        return !isBlank(inchiKey);
+    }
+
+    public boolean hasChemicalIdentifier() {
+        return hasInchi() || hasInchiKey();
+    }
+
+    public String getSpectrumAsText() {
+        if (peaks == null || peaks.isEmpty()) {
+            return "";
+        }
+
+        StringJoiner joiner = new StringJoiner(" ");
+        for (SpectrumPeak peak : peaks) {
+            joiner.add(peak.toString());
+        }
+        return joiner.toString();
+    }
+
+    public String getTruncatedSpectrumAsText(int maxCharacters) {
+        String spectrum = getSpectrumAsText();
+
+        if (maxCharacters <= 0 || spectrum.length() <= maxCharacters) {
+            return spectrum;
+        }
+
+        return spectrum.substring(0, maxCharacters) + " ... [TRUNCATED]";
+    }
+
+    public static String clean(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String cleanValue = value.trim();
+        if (cleanValue.isEmpty()) {
+            return null;
+        }
+
+        return cleanValue;
+    }
+
+    public static boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     @Override
@@ -144,13 +204,15 @@ public class MassBankSimpleRecord {
                 ", formula='" + formula + '\'' +
                 ", exactMass=" + exactMass +
                 ", cas='" + cas + '\'' +
+                ", inchi='" + inchi + '\'' +
                 ", inchiKey='" + inchiKey + '\'' +
+                ", smiles='" + smiles + '\'' +
                 ", retentionIndex=" + retentionIndex +
                 ", retentionTimeSeconds=" + retentionTimeSeconds +
                 ", retentionTimeMinutes=" + retentionTimeMinutes +
                 ", derivatizationType='" + derivatizationType + '\'' +
                 ", instrumentType='" + instrumentType + '\'' +
-                ", peaks=" + peaks.size() +
+                ", peaks=" + getNumberOfPeaks() +
                 '}';
     }
 }

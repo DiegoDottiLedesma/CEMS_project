@@ -1,10 +1,13 @@
-package GCMS.JSONMassBankReader;
+package GCMS.JSONMassBankHandler;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.BufferedReader;
+import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -14,10 +17,26 @@ public class MassBankSimpleJsonParser {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    /**
+     * Reads a MassBank JSON file. It supports both JSON Lines files and JSON array files.
+     */
+    public static List<MassBankSimpleRecord> readJsonFile(String filePath) throws IOException {
+        Path path = Path.of(filePath);
+
+        if (isJsonArray(path)) {
+            return readJsonArray(path);
+        }
+
+        return readJsonLines(filePath);
+    }
+
+    /**
+     * Reads a JSON Lines file, where each line contains one MassBank record.
+     */
     public static List<MassBankSimpleRecord> readJsonLines(String filePath) throws IOException {
         List<MassBankSimpleRecord> records = new ArrayList<>();
 
-        try (BufferedReader reader = Files.newBufferedReader(Path.of(filePath))) {
+        try (BufferedReader reader = Files.newBufferedReader(Path.of(filePath), StandardCharsets.UTF_8)) {
             String line;
             int lineNumber = 0;
 
@@ -32,8 +51,32 @@ public class MassBankSimpleJsonParser {
                     MassBankSimpleRecord record = parseLine(line);
                     records.add(record);
                 } catch (Exception e) {
-                    System.err.println("Línea ignorada por error en línea " + lineNumber + ": " + e.getMessage());
+                    System.err.println("Line ignored because of an error at line " + lineNumber + ": " + e.getMessage());
                 }
+            }
+        }
+
+        return records;
+    }
+
+    /**
+     * Reads a JSON array file, where the root object is an array of MassBank records.
+     */
+    public static List<MassBankSimpleRecord> readJsonArray(Path filePath) throws IOException {
+        List<MassBankSimpleRecord> records = new ArrayList<>();
+
+        JsonNode root = objectMapper.readTree(filePath.toFile());
+        if (!root.isArray()) {
+            return records;
+        }
+
+        int index = 0;
+        for (JsonNode node : root) {
+            index++;
+            try {
+                records.add(parseRoot(node));
+            } catch (Exception e) {
+                System.err.println("Record ignored because of an error at JSON array position " + index + ": " + e.getMessage());
             }
         }
 
@@ -42,7 +85,10 @@ public class MassBankSimpleJsonParser {
 
     public static MassBankSimpleRecord parseLine(String jsonLine) throws IOException {
         JsonNode root = objectMapper.readTree(jsonLine);
+        return parseRoot(root);
+    }
 
+    private static MassBankSimpleRecord parseRoot(JsonNode root) {
         MassBankSimpleRecord record = new MassBankSimpleRecord();
 
         JsonNode compound = getFirstCompound(root);
@@ -99,6 +145,19 @@ public class MassBankSimpleJsonParser {
         return record;
     }
 
+    private static boolean isJsonArray(Path filePath) throws IOException {
+        try (InputStream inputStream = new BufferedInputStream(Files.newInputStream(filePath))) {
+            int current;
+            while ((current = inputStream.read()) != -1) {
+                char character = (char) current;
+                if (!Character.isWhitespace(character)) {
+                    return character == '[';
+                }
+            }
+        }
+        return false;
+    }
+
     private static JsonNode getFirstCompound(JsonNode root) {
         JsonNode compounds = root.path("compound");
 
@@ -142,7 +201,7 @@ public class MassBankSimpleJsonParser {
 
                 peaks.add(new SpectrumPeak(mz, intensity));
             } catch (NumberFormatException ignored) {
-                // Pico mal formado. Se ignora.
+                // Malformed peak. It is ignored.
             }
         }
 

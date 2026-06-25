@@ -1,8 +1,8 @@
 package GCMS.Pipeline;
 
-import GCMS.JSONMassBankReader.MassBankSimpleJsonParser;
-import GCMS.JSONMassBankReader.MassBankSimpleRecord;
-import GCMS.JSONMassBankReader.SpectrumPeak;
+import GCMS.JSONMassBankHandler.MassBankSimpleJsonParser;
+import GCMS.JSONMassBankHandler.MassBankSimpleRecord;
+import GCMS.JSONMassBankHandler.SpectrumPeak;
 
 import java.io.IOException;
 import java.util.List;
