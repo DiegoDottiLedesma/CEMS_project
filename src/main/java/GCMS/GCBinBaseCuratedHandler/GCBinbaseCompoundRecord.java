@@ -1,36 +1,16 @@
 package GCMS.GCBinBaseCuratedHandler;
 
-/**
- * Java object that stores the selected compound information from the GCBinbase MSP/TXT file.
- *
- * Fields extracted:
- * - Name
- * - InChIKey
- * - RI
- * - Ion mode
- * - Derivative type
- */
 public class GCBinbaseCompoundRecord {
 
     private String name;
     private String inchiKey;
-    private Double retentionIndex;
-    private String ionMode;
-    private String derivativeType;
 
     public GCBinbaseCompoundRecord() {
     }
 
-    public GCBinbaseCompoundRecord(String name,
-                                   String inchiKey,
-                                   Double retentionIndex,
-                                   String ionMode,
-                                   String derivativeType) {
+    public GCBinbaseCompoundRecord(String name, String inchiKey) {
         this.name = name;
         this.inchiKey = inchiKey;
-        this.retentionIndex = retentionIndex;
-        this.ionMode = ionMode;
-        this.derivativeType = derivativeType;
     }
 
     public String getName() {
@@ -49,28 +29,14 @@ public class GCBinbaseCompoundRecord {
         this.inchiKey = inchiKey;
     }
 
-    public Double getRetentionIndex() {
-        return retentionIndex;
-    }
-
-    public void setRetentionIndex(Double retentionIndex) {
-        this.retentionIndex = retentionIndex;
-    }
-
-    public String getIonMode() {
-        return ionMode;
-    }
-
-    public void setIonMode(String ionMode) {
-        this.ionMode = ionMode;
-    }
-
-    public String getDerivativeType() {
-        return derivativeType;
-    }
-
-    public void setDerivativeType(String derivativeType) {
-        this.derivativeType = derivativeType;
+    public String getCompoundKey() {
+        if (inchiKey != null && !inchiKey.isBlank()) {
+            return inchiKey.trim();
+        }
+        if (name != null && !name.isBlank()) {
+            return "NAME:" + name.trim().toLowerCase();
+        }
+        return "UNKNOWN";
     }
 
     @Override
@@ -78,9 +44,6 @@ public class GCBinbaseCompoundRecord {
         return "GCBinbaseCompoundRecord{" +
                 "name='" + name + '\'' +
                 ", inchiKey='" + inchiKey + '\'' +
-                ", retentionIndex=" + retentionIndex +
-                ", ionMode='" + ionMode + '\'' +
-                ", derivativeType='" + derivativeType + '\'' +
                 '}';
     }
 }

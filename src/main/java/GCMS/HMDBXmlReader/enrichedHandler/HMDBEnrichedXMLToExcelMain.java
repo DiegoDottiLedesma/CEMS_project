@@ -22,9 +22,12 @@ public class HMDBEnrichedXMLToExcelMain {
             System.out.println("Excel creado correctamente en:");
             System.out.println(outputExcelPath);
 
-            System.out.println("\nPrimeros registros leídos:");
-            for (int i = 0; i < Math.min(10, records.size()); i++) {
+            System.out.println("\nRegistros leídos:");
+
+            for (int i = 0; i < records.size(); i++) {
+                System.out.println("Registro " + (i + 1) + ":");
                 System.out.println(records.get(i));
+                System.out.println("----------------------------------------");
             }
 
         } catch (Exception e) {
